@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<!-- saved from url=(0055)file:///C:/Users/RPL-32/Desktop/papan-futsal/index.html -->
+<html lang="id"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Papan Strategi Futsal — All-in-One</title>
+<style>
+:root{
+  --bg:#e7e7e7; --toolbar:#fff; --btn:#06b6d4; --field:#0b8a39; --text:#0b1220; --player-border:white;
+}
+body.dark{ --bg:#071021; --toolbar:#071227; --btn:#06b6d4; --field:#0b5b2f; --text:#e6eef6; --player-border:#06121a; }
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+#toolbar{display:flex;flex-wrap:wrap;gap:8px;padding:10px;background:var(--toolbar);align-items:center;justify-content:center;position:sticky;top:0;z-index:80;border-bottom:1px solid rgba(0,0,0,0.06)}
+#toolbar button{background:var(--btn);border:0;color:#fff;padding:8px 10px;border-radius:8px;cursor:pointer;font-weight:700}
+#toolbar button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--text)}
+#field{width:1000px;max-width:calc(100% - 40px);height:620px;margin:18px auto;position:relative;background:var(--field);border-radius:8px;border:6px solid white;overflow:hidden;touch-action:none}
+#field::before{content:"";position:absolute;top:20px;left:20px;right:20px;bottom:20px;border:4px solid white;border-radius:4px}
+.line-mid{position:absolute;top:20px;bottom:20px;left:50%;width:0;border-left:4px solid white}
+.circle-mid{position:absolute;width:160px;height:160px;border:4px solid white;border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%)}
+.box-left,.box-right{position:absolute;width:120px;height:300px;border:4px solid white;top:150px}
+.box-left{left:20px;border-left:none}
+.box-right{right:20px;border-right:none}
+
+/* canvas overlay (drawings) */
+#drawCanvas{position:absolute;left:0;top:0;width:100%;height:100%;z-index:5}
+
+/* player */
+.player{width:44px;height:44px;border-radius:50%;position:absolute;display:flex;align-items:center;justify-content:center;font-weight:800;color:white;border:3px solid var(--player-border);cursor:grab;z-index:10;user-select:none;touch-action:none;box-shadow:0 6px 14px rgba(2,8,23,0.3)}
+.player .label{position:absolute;top:52px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.6);padding:2px 6px;border-radius:6px;font-size:12px;display:none}
+.player.show-name .label{display:block}
+.player.selected{outline:3px dashed rgba(255,255,255,0.25);outline-offset:6px}
+
+/* responsive */
+@media (max-width:640px){#toolbar{flex-direction:column}#field{height:56vh;margin:12px}}
+</style>
+</head>
+<body>
+  <!-- toolbar -->
+  <div id="toolbar">
+    <button id="btnMove">Gerak</button>
+    <button id="btnFree">Gambar Bebas</button>
+    <button id="btnArrow">Panah</button>
+
+    <button id="addHome">Tambah Pemain Biru</button>
+    <button id="addAway">Tambah Pemain Merah</button>
+    <button id="toggleNames">Tampilkan Nama</button>
+
+    <button id="btnRecord" class="active">Rekam Move</button>
+    <button id="btnPlay">Play</button>
+    <button id="btnPause">Pause</button>
+    <button id="btnResetPath">Reset Path</button>
+
+    <button id="clearDraw">Hapus Gambar</button>
+    <button id="save">Simpan .json</button>
+    <button id="load">Muat .json</button>
+    <button id="mirror">Mirror</button>
+    <button id="export">Export PNG</button>
+
+    <button id="toggleDark">Dark Mode</button>
+    <button id="fullScreen">Full Screen</button>
+    <button id="undo">Undo</button>
+    <button id="redo">Redo</button>
+
+    <input id="fileLoader" type="file" accept=".json" style="display:none">
+  </div>
+
+  <!-- field -->
+  <div id="field">
+    <div class="line-mid"></div>
+    <div class="circle-mid"></div>
+    <div class="box-left"></div>
+    <div class="box-right"></div>
+    <canvas id="drawCanvas" width="989" height="609"></canvas>
+  <div class="player" id="p1" style="background: rgb(11, 142, 240); left: 22.4305px; top: 267.986px;"><div class="num">1</div><div class="label">A1</div></div><div class="player" id="p2" style="background: rgb(11, 142, 240); left: 335.764px; top: 101.806px;"><div class="num">2</div><div class="label">A2</div></div><div class="player" id="p3" style="background: rgb(11, 142, 240); left: 283.542px; top: 435.764px;"><div class="num">3</div><div class="label">A3</div></div><div class="player" id="p4" style="background: rgb(11, 142, 240); left: 165.764px; top: 253.542px;"><div class="num">4</div><div class="label">A4</div></div><div class="player" id="p5" style="background: rgb(11, 142, 240); left: 420.208px; top: 265.764px;"><div class="num">5</div><div class="label">A5</div></div><div class="player" id="p6" style="background: rgb(255, 59, 59); left: 945px; top: 271.319px;"><div class="num">6</div><div class="label">B6</div></div><div class="player selected" id="p7" style="background: rgb(255, 59, 59); left: 578px; top: 101.819px;"><div class="num">7</div><div class="label">B7</div></div><div class="player" id="p8" style="background: rgb(255, 59, 59); left: 553.556px; top: 361.819px;"><div class="num">8</div><div class="label">B8</div></div><div class="player" id="p9" style="background: rgb(255, 59, 59); left: 134.667px; top: 278.486px;"><div class="num">9</div><div class="label">B9</div></div><div class="player" id="p10" style="background: rgb(255, 59, 59); left: 69.1111px; top: 182.931px;"><div class="num">10</div><div class="label">B10</div></div></div>
+
+<script>
+/* ======== Inisialisasi ======== */
+const field = document.getElementById('field');
+const canvas = document.getElementById('drawCanvas');
+const ctx = canvas.getContext('2d');
+const fileLoader = document.getElementById('fileLoader');
+canvas.width = field.clientWidth; canvas.height = field.clientHeight;
+
+let mode = 'move'; // move | free | arrow
+let players = []; // {id, el, number, color, name, path:[]}
+let idCounter = 1;
+let drawing=false, startX=0, startY=0;
+let undoStack=[], redoStack=[];
+let previewImage = null;
+
+// recording / animation
+let recordMode=false;
+let selectedPlayer = null;
+let animRAF = null;
+
+/* ======== Util ======== */
+function toLocalCoords(evt){
+  const rect = field.getBoundingClientRect();
+  const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+  const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+  return {x: clientX - rect.left, y: clientY - rect.top};
+}
+function clampPos(x,y){
+  const r = 22, w = field.clientWidth, h = field.clientHeight;
+  x = Math.max(r, Math.min(w - r, x)); y = Math.max(r, Math.min(h - r, y));
+  return {x,y};
+}
+function saveCanvasState(){ undoStack.push(canvas.toDataURL()); if(undoStack.length>50) undoStack.shift(); redoStack=[]; }
+function undo(){ if(!undoStack.length) return; redoStack.push(canvas.toDataURL()); const img = new Image(); img.src = undoStack.pop(); img.onload = ()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0); } }
+function redo(){ if(!redoStack.length) return; undoStack.push(canvas.toDataURL()); const img = new Image(); img.src = redoStack.pop(); img.onload = ()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0); } }
+
+/* ======== Drawing (free & arrow) ======== */
+canvas.addEventListener('pointerdown',(e)=>{
+  if(mode==='free' || mode==='arrow'){
+    drawing=true;
+    const loc=toLocalCoords(e); startX=loc.x; startY=loc.y;
+    saveCanvasState();
+    if(mode==='free'){ ctx.lineWidth=4; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.beginPath(); ctx.moveTo(startX,startY); }
+    if(mode==='arrow'){ capturePreview(); }
+  }
+});
+canvas.addEventListener('pointermove',(e)=>{
+  if(!drawing) return;
+  const loc=toLocalCoords(e);
+  if(mode==='free'){ ctx.lineTo(loc.x,loc.y); ctx.stroke(); }
+  else if(mode==='arrow'){ redrawFromPreview(); drawArrow(startX,startY,loc.x,loc.y,true); }
+});
+canvas.addEventListener('pointerup',(e)=>{
+  if(!drawing) return;
+  const loc=toLocalCoords(e);
+  if(mode==='arrow'){ drawArrow(startX,startY,loc.x,loc.y,false); }
+  drawing=false;
+});
+function drawArrow(x1,y1,x2,y2,preview=false){
+  ctx.save();
+  ctx.strokeStyle = preview ? 'rgba(255,255,255,0.6)' : 'white';
+  ctx.fillStyle = preview ? 'rgba(255,255,255,0.6)' : 'white';
+  ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  const ang = Math.atan2(y2-y1,x2-x1), ah=12;
+  ctx.beginPath(); ctx.moveTo(x2,y2); ctx.lineTo(x2 - ah*Math.cos(ang-Math.PI/7), y2 - ah*Math.sin(ang-Math.PI/7));
+  ctx.lineTo(x2 - ah*Math.cos(ang+Math.PI/7), y2 - ah*Math.sin(ang+Math.PI/7)); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+function capturePreview(){ previewImage = new Image(); previewImage.src = canvas.toDataURL(); }
+function redrawFromPreview(){ if(previewImage){ ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(previewImage,0,0); } }
+
+/* ======== Mode controls ======== */
+function setMode(m){ mode=m; document.querySelectorAll('#toolbar button').forEach(b=>b.classList.remove('active')); const map={'move':'btnMove','free':'btnFree','arrow':'btnArrow'}; if(map[m]) document.getElementById(map[m]).classList.add('active'); }
+document.getElementById('btnMove').addEventListener('click',()=> setMode('move'));
+document.getElementById('btnFree').addEventListener('click',()=> setMode('free'));
+document.getElementById('btnArrow').addEventListener('pointerdown',()=> { capturePreview(); setMode('arrow'); });
+
+/* ======== Players creation/drag/remove ======== */
+function createPlayer(number,color,x,y,name){
+  const el = document.createElement('div'); el.className='player'; el.id = 'p'+(idCounter++); el.style.background = color;
+  el.innerHTML = `<div class="num">${number}</div><div class="label">${name||number}</div>`;
+  const pos = clampPos(x,y); el.style.left = (pos.x-22)+'px'; el.style.top = (pos.y-22)+'px';
+  field.appendChild(el);
+  const p = {id: el.id, el, number, color, name: name||number, path:[], animIndex:0, animPlaying:false};
+  players.push(p);
+
+  // dragging
+  let dragging=false, offX=0, offY=0;
+  el.addEventListener('pointerdown',(ev)=>{
+    ev.stopPropagation();
+    if(mode!=='move') return;
+    dragging=true; el.setPointerCapture(ev.pointerId);
+    const r = el.getBoundingClientRect(); const fr = field.getBoundingClientRect();
+    offX = ev.clientX - r.left; offY = ev.clientY - r.top;
+  });
+  el.addEventListener('pointermove',(ev)=>{
+    if(!dragging) return;
+    const fr = field.getBoundingClientRect();
+    let nx = ev.clientX - fr.left - offX + 22; let ny = ev.clientY - fr.top - offY + 22;
+    const cp = clampPos(nx,ny); el.style.left = (cp.x-22)+'px'; el.style.top = (cp.y-22)+'px';
+    // if in record mode and this is selected player, append waypoint while moving
+    if(recordMode && selectedPlayer && selectedPlayer.id===p.id){
+      const cx = cp.x, cy = cp.y;
+      // only push last if sufficiently far to avoid huge arrays
+      const last = p.path[p.path.length-1];
+      if(!last || Math.hypot(last.x-cx,last.y-cy)>8) p.path.push({x:cx,y:cy});
+    }
+  });
+  el.addEventListener('pointerup',(ev)=>{ dragging=false; try{el.releasePointerCapture(ev.pointerId);}catch(e){} });
+  el.addEventListener('contextmenu',(ev)=>{ ev.preventDefault(); removePlayer(p.id); });
+  el.addEventListener('click',(ev)=>{ // selection for recording
+    if(recordMode){
+      selectedPlayer = (selectedPlayer && selectedPlayer.id===p.id) ? null : p;
+      players.forEach(pp=> pp.el.classList.toggle('selected', pp===selectedPlayer));
+    }
+  });
+
+  return p;
+}
+function removePlayer(id){
+  const idx = players.findIndex(p=>p.id===id); if(idx===-1) return;
+  players[idx].el.remove(); players.splice(idx,1);
+}
+
+/* ======== initial players ======== */
+function addInitial(){
+  // home
+  createPlayer(1,'#0b8ef0',150,250,'A1');
+  createPlayer(2,'#0b8ef0',250,150,'A2');
+  createPlayer(3,'#0b8ef0',250,350,'A3');
+  createPlayer(4,'#0b8ef0',350,200,'A4');
+  createPlayer(5,'#0b8ef0',350,300,'A5');
+  // away
+  createPlayer(6,'#ff3b3b',600,250,'B6');
+  createPlayer(7,'#ff3b3b',500,150,'B7');
+  createPlayer(8,'#ff3b3b',500,350,'B8');
+  createPlayer(9,'#ff3b3b',450,200,'B9');
+  createPlayer(10,'#ff3b3b',450,300,'B10');
+}
+addInitial();
+
+/* toolbar add player */
+document.getElementById('addHome').addEventListener('click',()=> createPlayer(players.length+1,'#0b8ef0',field.clientWidth*0.25+Math.random()*80-40,field.clientHeight*0.5+Math.random()*80-40,'A'+(players.length+1)));
+document.getElementById('addAway').addEventListener('click',()=> createPlayer(players.length+1,'#ff3b3b',field.clientWidth*0.65+Math.random()*80-40,field.clientHeight*0.5+Math.random()*80-40,'B'+(players.length+1)));
+document.getElementById('toggleNames').addEventListener('click',()=>{
+  const show = !players[0]?.el.classList.contains('show-name');
+  players.forEach(p=> p.el.classList.toggle('show-name', show));
+});
+
+/* ======== Recording paths ======== */
+document.getElementById('btnRecord').addEventListener('click', ()=>{
+  recordMode = !recordMode;
+  selectedPlayer = null;
+  players.forEach(pp=> pp.el.classList.remove('selected'));
+  document.getElementById('btnRecord').classList.toggle('active', recordMode);
+  if(recordMode) alert('Rekam aktif: klik pemain untuk pilih lalu klik lapangan untuk menambah waypoint. Atau seret pemain untuk menambah titik.');
+});
+field.addEventListener('pointerdown',(ev)=>{
+  if(!recordMode) return;
+  if(!selectedPlayer){ alert('Pilih pemain dulu (klik lingkaran) untuk merekam jalurnya.'); return; }
+  const loc = toLocalCoords(ev); const cp = clampPos(loc.x,loc.y);
+  selectedPlayer.path.push({x:cp.x,y:cp.y});
+  // mark waypoint
+  ctx.save(); ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.beginPath(); ctx.arc(cp.x,cp.y,4,0,Math.PI*2); ctx.fill(); ctx.restore();
+});
+
+/* ======== Animation: play / pause / reset ======== */
+function animateAll(){
+  // prepare anim state
+  players.forEach(p=>{ p.animIndex = 0; p.animPlaying = (p.path && p.path.length>0); p._seg = null; });
+  runAnimations();
+}
+function runAnimations(){
+  if(animRAF) cancelAnimationFrame(animRAF);
+  const step = (ts)=>{
+    let anyPlaying=false;
+    players.forEach(p=>{
+      if(!p.animPlaying) return;
+      anyPlaying=true;
+      const el = p.el;
+      if(p.animIndex >= p.path.length){ p.animPlaying=false; return; }
+      if(!p._seg){
+        // setup segment
+        const rect = el.getBoundingClientRect(); const fr = field.getBoundingClientRect();
+        const curX = rect.left - fr.left + 22; const curY = rect.top - fr.top + 22;
+        p._seg = {fromX:curX,fromY:curY,toX:p.path[p.animIndex].x,toY:p.path[p.animIndex].y,start:ts,dur:600};
+      }
+      const s = p._seg; const t = (ts - s.start) / s.dur;
+      if(t>=1){
+        el.style.left = (s.toX - 22) + 'px'; el.style.top = (s.toY - 22) + 'px';
+        p.animIndex++; p._seg = null;
+      } else {
+        const cx = s.fromX + (s.toX - s.fromX) * t; const cy = s.fromY + (s.toY - s.fromY) * t;
+        el.style.left = (cx - 22) + 'px'; el.style.top = (cy - 22) + 'px';
+      }
+    });
+    if(anyPlaying) animRAF = requestAnimationFrame(step); else { if(animRAF) cancelAnimationFrame(animRAF); animRAF=null; }
+  };
+  animRAF = requestAnimationFrame(step);
+}
+function pauseAnimations(){ players.forEach(p=> p.animPlaying=false); if(animRAF) cancelAnimationFrame(animRAF); animRAF=null; }
+function resetAllPaths(){ players.forEach(p=> p.path=[]); ctx.clearRect(0,0,canvas.width,canvas.height); }
+
+/* toolbar animation */
+document.getElementById('btnPlay').addEventListener('click', ()=> animateAll());
+document.getElementById('btnPause').addEventListener('click', ()=> pauseAnimations());
+document.getElementById('btnResetPath').addEventListener('click', ()=> resetAllPaths());
+
+/* ======== canvas clear / undo / redo ======== */
+document.getElementById('clearDraw').addEventListener('click', ()=> { saveCanvasState(); ctx.clearRect(0,0,canvas.width,canvas.height); });
+document.getElementById('undo').addEventListener('click', ()=> undo());
+document.getElementById('redo').addEventListener('click', ()=> redo());
+
+/* ======== save / load formasi (players + canvas drawing) ======== */
+document.getElementById('save').addEventListener('click', ()=>{
+  const data = { players: players.map(p=>({id:p.id,number:p.number,color:p.color,name:p.name,left:p.el.style.left,top:p.el.style.top,path:p.path})), canvas: canvas.toDataURL() };
+  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'formasi.json'; a.click();
+});
+document.getElementById('load').addEventListener('click', ()=> fileLoader.click());
+fileLoader.addEventListener('change',(ev)=>{
+  const file = ev.target.files[0]; if(!file) return;
+  const reader = new FileReader(); reader.onload = ()=> {
+    try{
+      const data = JSON.parse(reader.result);
+      // clear current
+      players.forEach(p=> p.el.remove()); players=[]; idCounter=1;
+      // load players
+      (data.players||[]).forEach(pl=>{
+        const left = parseFloat(pl.left||0), top = parseFloat(pl.top||0);
+        const p = createPlayer(pl.number, pl.color, left+22, top+22, pl.name||pl.number);
+        p.path = pl.path||[];
+      });
+      // restore canvas
+      if(data.canvas){ const img = new Image(); img.onload = ()=> { ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0); }; img.src = data.canvas; }
+    }catch(err){ alert('Gagal muat: '+err.message); }
+  }; reader.readAsText(file);
+});
+
+/* ======== mirror (players + canvas horizontally) ======== */
+document.getElementById('mirror').addEventListener('click', ()=>{
+  players.forEach(p=>{
+    const left = parseFloat(p.el.style.left); p.el.style.left = (field.clientWidth - left - 44) + 'px';
+    p.path = p.path.map(pt=> ({x: field.clientWidth - pt.x, y: field.clientHeight - pt.y}));
+  });
+  // flip canvas horizontally
+  saveCanvasState();
+  const tmp = new Image(); tmp.src = canvas.toDataURL();
+  tmp.onload = ()=> { ctx.clearRect(0,0,canvas.width,canvas.height); ctx.save(); ctx.translate(canvas.width,0); ctx.scale(-1,1); ctx.drawImage(tmp,0,0); ctx.restore(); }
+});
+
+/* ======== export PNG (render players + canvas into merged image) ======== */
+document.getElementById('export').addEventListener('click', ()=>{
+  const merge = document.createElement('canvas'); merge.width = canvas.width; merge.height = canvas.height;
+  const g = merge.getContext('2d');
+  // background (approximate using computed bg color)
+  g.fillStyle = getComputedStyle(field).backgroundColor; g.fillRect(0,0,merge.width,merge.height);
+  // draw basic field inner border (outer border is CSS; draw inner white rect to mimic lines)
+  g.strokeStyle = 'white'; g.lineWidth = 4; g.strokeRect(20,20,merge.width-40,merge.height-40);
+  // center line
+  g.beginPath(); g.moveTo(merge.width/2,20); g.lineTo(merge.width/2,merge.height-20); g.stroke();
+  // center circle
+  g.beginPath(); g.arc(merge.width/2,merge.height/2,80,0,Math.PI*2); g.stroke();
+  // penalty boxes
+  g.strokeRect(20, (merge.height/2)-150, 120, 300); g.strokeRect(merge.width-140, (merge.height/2)-150, 120, 300);
+  // players
+  players.forEach(p=>{
+    const rect = p.el.getBoundingClientRect(); const fr = field.getBoundingClientRect();
+    const cx = rect.left - fr.left + 22; const cy = rect.top - fr.top + 22;
+    g.beginPath(); g.fillStyle = p.color; g.arc(cx,cy,22,0,Math.PI*2); g.fill();
+    g.fillStyle = '#fff'; g.font='bold 14px Arial'; g.textAlign='center'; g.textBaseline='middle'; g.fillText(String(p.number),cx,cy);
+    if(p.name) { g.fillStyle='rgba(0,0,0,0.6)'; g.font='12px Arial'; g.fillText(p.name,cx,cy+34); }
+  });
+  // drawings on top
+  g.drawImage(canvas,0,0);
+  const a = document.createElement('a'); a.href = merge.toDataURL(); a.download = 'strategi.png'; a.click();
+});
+
+/* ======== Dark mode & fullscreen ======== */
+document.getElementById('toggleDark').addEventListener('click', ()=> document.body.classList.toggle('dark'));
+document.getElementById('fullScreen').addEventListener('click', ()=> {
+  if(!document.fullscreenElement) field.requestFullscreen().catch(()=>{}); else document.exitFullscreen();
+});
+
+/* ======== Undo/Redo bindings already above ======== */
+
+/* ======== Responsive: resize canvas ======== */
+window.addEventListener('resize', ()=> { canvas.width = field.clientWidth; canvas.height = field.clientHeight; });
+
+/* ======== misc helpers ======== */
+document.getElementById('btnPlay').addEventListener('click', ()=> animateAll());
+document.getElementById('btnPause').addEventListener('click', ()=> pauseAnimations());
+document.getElementById('btnResetPath').addEventListener('click', ()=> resetAllPaths());
+
+/* ======== capture preview for arrow dynamic drawing ======== */
+function capturePreview(){ const img = new Image(); img.src = canvas.toDataURL(); previewImage = img; }
+function redrawFromPreview(){ if(previewImage){ ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(previewImage,0,0); } }
+
+/* ======== done ======== */
+saveCanvasState();
+
+</script>
+
+
+</body></html>
